@@ -1,0 +1,263 @@
+================================================================================
+   D-BASS RADIO v3 — INSTALL GUIDE
+   Drujba Bass Radio — Sofia
+   Version: 3.1 — Delete-after-play, no repeats, full filename in admin
+================================================================================
+
+
+================================================================================
+ WHAT THIS PACKAGE CONTAINS
+================================================================================
+
+  setup.sh                — installer, run once on Ubuntu 22.04
+  app.py                  — Flask admin API (copied by setup.sh)
+  www/index.html          — listener radio page
+  www/drujbaman/index.html — admin panel
+  INSTALL.txt             — this file
+  README.md               — project overview
+
+
+================================================================================
+ WHAT'S FIXED IN v3.1
+================================================================================
+
+  - Delete-after-play: songs are deleted from disk as soon as they finish.
+    Repeats are physically impossible within a batch.
+
+  - Admin track list shows full filename: P1B02_0043 - Song Name
+    Listeners see only the clean song name (prefix stripped automatically)
+
+  - Neon broken sign effect on DRUJBA BASS in the listener page
+
+  - setup.sh: netcat-openbsd (fixes Ubuntu 22.04 package name)
+  - setup.sh: curl -skL for yt-dlp (fixes SSL issues on corporate networks)
+  - setup.sh: pip3 without --break-system-packages (fixes Ubuntu 22.04 pip)
+
+
+================================================================================
+ PART 1 — DELETE EVERYTHING FROM THE SERVER (clean redeploy)
+================================================================================
+
+  SSH into your server. Run these commands to wipe the old installation:
+
+  sudo systemctl stop icecast2 dbass-liquidsoap dbass-bridge nginx 2>/dev/null || true
+
+  sudo rm -rf /opt/dbass
+  sudo rm -rf /var/www/dbass
+  sudo rm -rf /etc/dbass
+  sudo rm -rf /var/lib/dbass
+  sudo rm -rf /etc/liquidsoap
+  sudo rm -f /etc/nginx/sites-enabled/dbass
+  sudo rm -f /etc/nginx/sites-available/dbass
+  sudo rm -f /etc/systemd/system/dbass-liquidsoap.service
+  sudo rm -f /etc/systemd/system/dbass-bridge.service
+  sudo systemctl daemon-reload
+
+  rm -rf ~/dbass-radio-final
+
+  Everything is now wiped. Proceed to Part 2.
+
+
+================================================================================
+ PART 2 — UPDATE GITHUB (from your Windows PC)
+================================================================================
+
+  Unzip the package. Copy the files into your local repo folder:
+
+    app.py                     → root of repo (replace old one)
+    setup.sh                   → root of repo (replace old one)
+    www/index.html             → www/ folder (replace old one)
+    www/drujbaman/index.html   → www/drujbaman/ folder (replace old one)
+    README.md                  → root of repo (replace old one)
+    INSTALL.txt                → root of repo (replace old one)
+    .gitignore                 → root of repo (replace old one)
+
+  Open PowerShell or terminal in the repo folder:
+
+    git add .
+    git commit -m "v3.1 delete-after-play, neon sign, admin display, setup fixes"
+    git push
+
+  GitHub is now up to date.
+
+
+================================================================================
+ PART 3 — DEPLOY FRESH ON THE SERVER
+================================================================================
+
+  Back in the SSH terminal on your server:
+
+  ── Step 1 — Clone fresh from GitHub ─────────────────────────────────────────
+
+    git clone https://github.com/5t3f4nh4k/dbass-radio-final.git
+    cd dbass-radio-final
+
+  ── Step 2 — Run setup ───────────────────────────────────────────────────────
+
+    sudo bash setup.sh
+
+    Set your 4 passwords when prompted:
+      - Icecast source password  (internal, Liquidsoap uses it)
+      - Icecast admin password   (Icecast web panel)
+      - DJ stream password       (DJs connect with this)
+      - Admin panel password     (your /drujbaman login)
+
+    WRITE THESE DOWN — especially DJ and admin panel passwords.
+
+    Installation takes 3-8 minutes. Wait for SETUP COMPLETE at the end.
+
+  ── Step 3 — Verify services ─────────────────────────────────────────────────
+
+    sudo systemctl status icecast2 dbass-liquidsoap dbass-bridge nginx \
+      --no-pager | grep Active
+
+    All 4 should say: active (running)
+
+    If any show failed:
+    sudo systemctl restart icecast2 dbass-liquidsoap dbass-bridge nginx
+
+
+================================================================================
+ PART 4 — GO LIVE
+================================================================================
+
+  Get your public IP:
+    curl ifconfig.me
+
+  Open admin panel in browser:
+    http://YOUR_IP/drujbaman
+
+  Login: admin / (password you set during setup)
+
+  Paste a YouTube playlist URL in PLAYLIST 1 → SET PL1
+  Click WIPE & LOAD & START FRESH → confirm
+
+  Radio starts in 2-5 minutes once first batch downloads.
+
+  Share with listeners:
+    http://YOUR_IP
+
+
+================================================================================
+ PART 5 — DAILY LAUNCH (if running on VPS — nothing needed, always on)
+================================================================================
+
+  If running on WSL2 (home PC):
+
+  1. Open Ubuntu from Start menu
+     sudo systemctl status icecast2 dbass-liquidsoap dbass-bridge nginx \
+       --no-pager | grep Active
+     If not running:
+     sudo systemctl start icecast2 dbass-liquidsoap dbass-bridge nginx
+
+  2. Open PowerShell as Administrator
+     cloudflared tunnel --url http://localhost:80
+     Copy the trycloudflare.com URL and share it
+
+
+================================================================================
+ USEFUL COMMANDS
+================================================================================
+
+  Skip current track:
+  echo "music.skip" | nc 127.0.0.1 1234
+
+  Check listener count:
+  curl -s http://localhost:8000/status-json.xsl | python3 -m json.tool | grep listeners
+
+  Update yt-dlp (do monthly):
+  sudo yt-dlp -U
+
+  Watch Liquidsoap log live:
+  sudo journalctl -u dbass-liquidsoap -f
+
+  Watch bridge log live:
+  sudo journalctl -u dbass-bridge -f
+
+  Change admin panel password:
+  sudo htpasswd /etc/nginx/.dbass_admin admin
+
+  Keep Windows from sleeping (PowerShell as Admin):
+  powercfg /change standby-timeout-ac 0
+  powercfg /change standby-timeout-dc 0
+
+
+================================================================================
+ TROUBLESHOOTING
+================================================================================
+
+  Radio silent / no stream:
+  sudo systemctl restart icecast2 dbass-liquidsoap
+
+  Admin panel shows all OFFLINE:
+  sudo systemctl restart dbass-bridge
+  sudo journalctl -u dbass-bridge -n 20 --no-pager
+
+  Flask / ModuleNotFoundError:
+  sudo pip3 install flask flask-cors
+  sudo systemctl restart dbass-bridge
+
+  Songs not loading / yt-dlp fails:
+  sudo yt-dlp -U
+  Then try loading the playlist again from the admin panel.
+
+  Services not starting after reboot:
+  sudo systemctl daemon-reload
+  sudo systemctl enable icecast2 dbass-liquidsoap dbass-bridge nginx
+  sudo systemctl start icecast2 dbass-liquidsoap dbass-bridge nginx
+
+
+================================================================================
+ JINGLES (optional)
+================================================================================
+
+  Place two MP3 files in /var/lib/dbass/jingles/:
+    dabassradio.mp3
+    radiobass-drujbabass.mp3
+
+  Copy from Windows Downloads (run in Ubuntu):
+  sudo cp "/mnt/c/Users/YOUR_USERNAME/Downloads/jingle1.mp3" \
+    /var/lib/dbass/jingles/dabassradio.mp3
+  sudo systemctl restart dbass-liquidsoap
+
+  To disable jingles:
+  sudo nano /etc/liquidsoap/dbass.liq
+  Find:   [live, music_with_jingles, silence]
+  Change: [live, playlist_source, silence]
+  Save: Ctrl+O, Enter, Ctrl+X
+  sudo systemctl restart dbass-liquidsoap
+
+
+================================================================================
+ DJ LIVE TAKEOVER
+================================================================================
+
+  Configure Mixxx, BUTT, or VirtualDJ:
+    Protocol:   Icecast 2
+    Host:       YOUR_IP (or trycloudflare.com URL)
+    Port:       8001
+    Mount:      /live
+    Username:   source
+    Password:   DJ stream password from setup
+    Format:     MP3, 128kbps, Stereo
+
+  When DJ connects — stream switches to live automatically.
+  When DJ disconnects — playlist resumes automatically.
+
+
+================================================================================
+ PASSWORDS REFERENCE (fill in after setup)
+================================================================================
+
+  Admin panel:    admin / ___________________________
+  DJ stream:      source / ___________________________
+  Icecast source: ___________________________
+  Icecast admin:  ___________________________
+
+
+================================================================================
+ END
+================================================================================
+
+  D-BASS RADIO v3.1 — Drujba Bass — Sofia
+  The bass will set you free.

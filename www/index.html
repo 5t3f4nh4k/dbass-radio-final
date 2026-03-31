@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D-BASS RADIO</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060606;--bg2:#0d0d0d;--green:#00FF41;--orange:#FF4500;--purple:#7B00D4;--text:#c8c8c8;--muted:#444;--dim:#222;--font-h:'Bebas Neue',Impact,sans-serif;--font-mono:'Share Tech Mono',monospace;--font-ui:'Barlow Condensed',sans-serif}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;display:flex;align-items:center;justify-content:center}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+.card{width:min(460px,95vw);background:var(--bg2);border:1px solid #1a1a1a;padding:40px 36px 32px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");opacity:.5}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--green),var(--orange))}
+.logo{font-family:var(--font-h);font-size:52px;letter-spacing:6px;color:var(--green);line-height:1;text-shadow:0 0 30px rgba(0,255,65,.4);animation:glitch 5s infinite}
+.logo span{color:var(--orange)}
+.logo-sub{font-family:var(--font-mono);font-size:11px;letter-spacing:5px;color:#e8e8e8;text-shadow:0 0 8px rgba(255,255,255,0.9);margin-top:4px;margin-bottom:28px;animation:neon-broken 9s infinite}
+@keyframes neon-broken{0%{opacity:0}4%{opacity:1}6%{opacity:.1}8%{opacity:1}10%{opacity:.05}12%{opacity:1}14%{opacity:.8}16%{opacity:1}17%{opacity:0}22%{opacity:0}23%{opacity:1}25%{opacity:.1}27%{opacity:1}29%{opacity:0}55%{opacity:0}56%{opacity:.9}57%{opacity:0}58%{opacity:1}60%{opacity:.05}61%{opacity:1}63%{opacity:0}90%{opacity:0}91%{opacity:1}93%{opacity:.2}95%{opacity:1}97%{opacity:0}100%{opacity:0}}@keyframes glitch{0%,95%,100%{text-shadow:0 0 30px rgba(0,255,65,.4)}96%{text-shadow:3sx 0 20px rgba(0,255,65,.4),-3px 0 8px rgba(255,69,0,.5);transform:translateX(1px)}97%{text-shadow:-3px 0 20px rgba(0,255,65,.4);transform:translateX(-1px)}98%{transform:none}}
+.status-row{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--dim)}
+.on-air{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--orange)}
+.on-air.offline{color:var(--muted)}
+.on-dot{width:7px;height:7px;border-radius:50%;background:var(--orange);animation:blink 1s infinite}
+.on-air.offline .on-dot{background:var(--muted);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.lc{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:auto}
+.lc span{color:var(--green)}
+.np-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:3px;margin-bottom:8px}
+.np-title{font-family:var(--font-h);font-size:26px;letter-spacing:1px;color:var(--text);line-height:1.1;margin-bottom:4px;min-height:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-artist{font-size:13px;color:var(--muted);letter-spacing:1px;min-height:18px;margin-bottom:24px}
+.viz{height:56px;margin-bottom:20px;border-top:1px solid var(--dim);border-bottom:1px solid var(--dim);padding:6px 0}
+#vc{display:block;width:100%;height:44px}
+.controls{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.pb{width:56px;height:56px;background:var(--green);border:none;color:#000;font-size:22px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;font-weight:900}
+.pb:hover{background:#00cc33;transform:scale(1.05)}
+.pb.loading{background:var(--dim);color:var(--muted);cursor:default}
+.vw{flex:1;display:flex;flex-direction:column;gap:6px}
+.vl{font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:2px;display:flex;justify-content:space-between}
+.vs{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--dim);outline:none;cursor:pointer}
+.vs::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--green);border-radius:50%}
+.vs::-moz-range-thumb{width:14px;height:14px;background:var(--green);border-radius:50%;border:none}
+.si{display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--dim)}
+.ic{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--dim);color:var(--muted)}
+.ic.g{border-color:rgba(0,255,65,.3);color:rgba(0,255,65,.6)}
+.ic.o{border-color:rgba(255,69,0,.3);color:rgba(255,69,0,.6)}
+.em{font-family:var(--font-mono);font-size:11px;color:var(--orange);padding:8px;border-left:2px solid var(--orange);margin-bottom:16px;display:none}
+.em.v{display:block}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">D-<span>BASS</span> RADIO</div>
+  <div class="logo-sub">DRUJBA BASS</div>
+  <div class="status-row">
+    <div class="on-air offline" id="oa"><div class="on-dot"></div><span id="oat">CONNECTING...</span></div>
+    <div class="lc"><span id="lc">—</span> LISTENING</div>
+  </div>
+  <div class="np-label">NOW PLAYING</div>
+  <div class="np-title" id="npt">—</div>
+  <div class="np-artist" id="npa">Press play to connect</div>
+  <div class="viz"><canvas id="vc"></canvas></div>
+  <div class="em" id="em"></div>
+  <div class="controls">
+    <button class="pb loading" id="pb" onclick="_tp()">▶</button>
+    <div class="vw">
+      <div class="vl"><span>VOLUME</span><span id="vd">80</span></div>
+      <input class="vs" type="range" min="0" max="100" value="80" oninput="_sv(this.value)">
+    </div>
+  </div>
+  <div class="si">
+    <div class="ic g">MP3 · 128kbps</div>
+    <div class="ic">STEREO · 44.1kHz</div>
+    <div class="ic o" id="mc">—</div>
+    <div class="ic" style="margin-left:auto;border-color:transparent;font-size:8px;color:var(--muted)">DRUJBA BASS RADIO</div>
+  </div>
+</div>
+<audio id="ra" preload="none" crossorigin="anonymous"></audio>
+<script>
+var _su='/stream',_sa='/api/status',_pm=8e3,_pl=false,_ax,_an,_sn,_vd;
+var _au=document.getElementById('ra');
+var _cv=document.getElementById('vc'),_cx=_cv.getContext('2d');
+function _rc(){_cv.width=_cv.offsetWidth*devicePixelRatio;_cv.height=_cv.offsetHeight*devicePixelRatio}
+window.addEventListener('resize',_rc);_rc();
+function _dv(){
+  requestAnimationFrame(_dv);
+  var W=_cv.width,H=_cv.height;
+  _cx.clearRect(0,0,W,H);
+  if(!_pl){_cx.strokeStyle='#1e1e1e';_cx.lineWidth=1;_cx.beginPath();
+    for(var x=0;x<W;x++){var y=H/2+Math.sin(x*0.03+Date.now()*8e-4)*3;x===0?_cx.moveTo(x,y):_cx.lineTo(x,y)}
+    _cx.stroke();return}
+  var b=64,bw=W/b;
+  if(_an&&_vd)_an.getByteFrequencyData(_vd);
+  for(var i=0;i<b;i++){
+    var v=_an&&_vd?_vd[Math.floor(i*_vd.length/b)]/255:Math.max(0,Math.min(1,Math.exp(-i/b*2.5)*0.6+Math.sin(Date.now()/380+i*0.2)*0.2+(Math.random()-0.5)*0.1));
+    var bh=v*H*0.9,x=i*bw,h=i<b*0.3?'#00FF41':i<b*0.6?'#FFD700':'#FF4500';
+    _cx.fillStyle=h;_cx.globalAlpha=0.7+v*0.3;_cx.fillRect(x+1,H-bh,bw-2,bh);_cx.globalAlpha=1
+  }
+}
+_dv();
+function _ia(){
+  try{
+    _ax=new(window.AudioContext||window.webkitAudioContext)();
+    _an=_ax.createAnalyser();_an.fftSize=256;_an.smoothingTimeConstant=0.8;
+    _sn=_ax.createMediaElementSource(_au);_sn.connect(_an);_an.connect(_ax.destination);
+    _vd=new Uint8Array(_an.frequencyBinCount)
+  }catch(e){}
+}
+function _tp(){_pl?_sp():_st()}
+function _st(){
+  if(!_ax)_ia();
+  if(_ax&&_ax.state==='suspended')_ax.resume();
+  _au.src=_su+'?t='+Date.now();_au.load();
+  var b=document.getElementById('pb');
+  b.textContent='…';b.className='pb loading';_se(null);
+  _au.play().then(function(){_pl=true;b.textContent='⏸';b.className='pb';_soa(true)})
+    .catch(function(){_pl=false;b.textContent='▶';b.className='pb';_se('Could not connect to stream.');_soa(false)})
+}
+function _sp(){_au.pause();_au.src='';_pl=false;document.getElementById('pb').textContent='▶';document.getElementById('pb').className='pb'}
+_au.onended=function(){if(_pl)setTimeout(_st,3e3)};
+_au.onerror=function(){_soa(false);if(_pl)setTimeout(_st,5e3)};
+_au.onstalled=function(){if(_pl)setTimeout(_st,3e3)};
+function _sv(v){_au.volume=v/100;document.getElementById('vd').textContent=v}
+function _soa(on){var e=document.getElementById('oa'),t=document.getElementById('oat');on?(e.classList.remove('offline'),t.textContent='ON AIR'):(e.classList.add('offline'),t.textContent='OFFLINE')}
+function _se(m){var e=document.getElementById('em');m?(e.textContent=m,e.classList.add('v')):e.classList.remove('v')}
+function _fs(){
+  fetch(_sa).then(function(r){return r.json()}).then(function(d){
+    document.getElementById('lc').textContent=d.listeners||'—';
+    var t=(d.current_track||'—').replace(/^[A-Z0-9]*_\d+ - /, '')
+    document.getElementById('npt').textContent=t;
+    document.getElementById('npa').textContent=d.is_live?'🎛 DJ LIVE':'D-BASS RADIO';
+    document.getElementById('mc').textContent=d.mode?d.mode.toUpperCase():'—';
+    if(d.icecast==='online'){document.getElementById('pb').classList.remove('loading');if(!_pl)document.getElementById('pb').textContent='▶'}
+  }).catch(function(){})
+}
+_fs();setInterval(_fs,_pm);
+setTimeout(function(){var b=document.getElementById('pb');if(b.classList.contains('loading')){b.classList.remove('loading');b.textContent='▶'}},1500);
+</script>
+</body>
+</html>

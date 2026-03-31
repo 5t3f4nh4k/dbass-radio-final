@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D-BASS RADIO — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060606;--bg2:#0d0d0d;--bg3:#141414;--border:#1e1e1e;--border2:#2a2a2a;--green:#00FF41;--orange:#FF4500;--purple:#7B00D4;--cyan:#00F5FF;--red:#FF2244;--text:#c8c8c8;--muted:#555;--font-h:'Bebas Neue',Impact,sans-serif;--font-mono:'Share Tech Mono',monospace;--font-ui:'Barlow Condensed',sans-serif}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font-ui)}
+.header{background:var(--bg2);border-bottom:1px solid var(--border2);padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--font-h);font-size:26px;letter-spacing:4px;color:var(--green)}
+.logo span{color:var(--orange)}
+.admin-tag{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;padding:3px 10px;border:1px solid var(--orange);color:var(--orange)}
+.main{max-width:960px;margin:0 auto;padding:24px;display:grid;gap:20px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:20px 24px}
+.card-title{font-family:var(--font-h);font-size:20px;letter-spacing:3px;color:var(--text);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.card-title .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:4px}
+.stat{background:var(--bg3);padding:14px;border:1px solid var(--border)}
+.stat-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px}
+.stat-val{font-family:var(--font-h);font-size:24px;letter-spacing:1px;color:var(--text);line-height:1}
+.stat-val.green{color:var(--green)}.stat-val.red{color:var(--red)}.stat-val.purple{color:var(--purple)}.stat-val.muted{color:var(--muted)}.stat-val.orange{color:var(--orange)}
+.pill{display:inline-block;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:2px 8px;border:1px solid var(--border);color:var(--muted);margin-top:4px}
+.pill.online{border-color:rgba(0,255,65,.4);color:var(--green)}.pill.offline{border-color:rgba(255,34,68,.4);color:var(--red)}
+.btn{padding:10px 20px;font-family:var(--font-h);font-size:16px;letter-spacing:2px;border:none;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-green{background:var(--green);color:#000}.btn-green:hover{background:#00cc33}
+.btn-dim{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}.btn-dim:hover{border-color:var(--green);color:var(--green)}
+.btn-orange{background:var(--orange);color:#fff}.btn-orange:hover{background:#cc3700}
+.btn-red{background:#1a0000;color:var(--red);border:1px solid var(--red)}.btn-red:hover{background:var(--red);color:#fff}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.console{background:#020202;border:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:#00BB30;padding:12px;height:140px;overflow-y:auto;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.section-note{font-family:var(--font-mono);font-size:10px;color:var(--muted);border-left:2px solid var(--border2);padding-left:10px;margin-bottom:14px;line-height:1.8}
+.pl-slot{background:var(--bg3);border:1px solid var(--border2);padding:16px;margin-bottom:12px}
+.pl-slot.active{border-color:var(--green)}
+.pl-slot.active-reset{border-color:var(--orange)}
+.pl-slot.queued{border-color:#2a1800}
+.pl-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.pl-title{font-family:var(--font-h);font-size:16px;letter-spacing:2px}
+.pl-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;padding:3px 10px;border:1px solid var(--border2);color:var(--muted)}
+.pl-badge.active{border-color:var(--green);color:var(--green)}
+.pl-badge.active-reset{border-color:var(--orange);color:var(--orange)}
+.pl-badge.queued{border-color:var(--orange);color:var(--orange)}
+.pl-badge.loading{border-color:var(--purple);color:var(--purple)}
+.pl-badge.notset{border-color:var(--border2);color:var(--muted)}
+.pl-status{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+.pl-input-row{display:flex;gap:8px;align-items:center}
+.pl-input-row input{flex:1;background:#0a0a0a;border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:11px;padding:9px 12px;outline:none}
+.pl-input-row input:focus{border-color:var(--green)}
+.pl-input-row input::placeholder{color:var(--muted)}
+.batch-bar{height:3px;background:var(--border);margin:10px 0 6px;border-radius:2px}
+.batch-fill{height:100%;background:var(--green);transition:width .5s;border-radius:2px}
+.danger-zone{border:1px solid #2a0000;background:#0d0000;padding:16px}
+.danger-title{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;color:var(--red);margin-bottom:12px}
+.danger-note{font-family:var(--font-mono);font-size:10px;color:#663333;margin-bottom:12px;line-height:1.8}
+.track-list{max-height:300px;overflow-y:auto;border:1px solid var(--border);margin-top:12px}
+.track-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)}
+.track-item:last-child{border-bottom:none}
+.track-num{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:24px;text-align:right;flex-shrink:0}
+.track-name{flex:1;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-batch{font-family:var(--font-mono);font-size:9px;color:var(--muted);flex-shrink:0;padding:2px 6px;border:1px solid var(--border)}
+.dj-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dj-field{margin-bottom:10px}
+.dj-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:4px}
+.dj-val{font-family:var(--font-mono);font-size:12px;color:var(--cyan);background:var(--bg3);padding:8px 10px;border:1px solid var(--border);cursor:pointer;user-select:all;display:flex;justify-content:space-between;align-items:center}
+.dj-val:hover{border-color:var(--cyan)}
+.copy-hint{font-size:9px;color:var(--muted)}
+.dj-status-row{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);margin-bottom:16px}
+.dj-status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dj-status-dot.live{background:var(--purple)}
+.dj-status-text{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.dj-status-text.live{color:var(--purple)}
+.toast{position:fixed;bottom:24px;right:24px;z-index:1000;background:var(--bg3);border:1px solid var(--green);font-family:var(--font-mono);font-size:11px;color:var(--green);padding:8px 16px;opacity:0;transition:.3s;letter-spacing:1px;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">D-<span>BASS</span> RADIO</div>
+  <div class="admin-tag">ADMIN PANEL</div>
+  <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted)" id="clock"></div>
+</div>
+<div class="main">
+
+  <!-- STATUS -->
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--green)"></div>SYSTEM STATUS</div>
+    <div class="status-grid">
+      <div class="stat"><div class="stat-label">LISTENERS</div><div class="stat-val green" id="s-listeners">-</div><div class="pill" id="s-icecast-pill">...</div></div>
+      <div class="stat"><div class="stat-label">ICECAST</div><div class="stat-val" id="s-icecast">-</div></div>
+      <div class="stat"><div class="stat-label">LIQUIDSOAP</div><div class="stat-val" id="s-lq">-</div></div>
+      <div class="stat"><div class="stat-label">MODE</div><div class="stat-val" id="s-mode">-</div></div>
+      <div class="stat"><div class="stat-label">IN FOLDER</div><div class="stat-val orange" id="s-tracks">-</div></div>
+      <div class="stat"><div class="stat-label">BATCH PLAYED</div><div class="stat-val" id="s-played">-</div></div>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:var(--bg3);border:1px solid var(--border)">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px">NOW PLAYING</div>
+      <div style="font-family:var(--font-h);font-size:20px;letter-spacing:1px" id="s-track">-</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:4px" id="s-batch-status">-</div>
+    </div>
+  </div>
+
+  <!-- PLAYLISTS -->
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--orange)"></div>PLAYLISTS</div>
+    <div class="section-note">
+      SET updates the URL for the next batch cycle — radio never stops.<br>
+      Active playlist resets to song 1 on next batch. Queued playlist updates immediately.
+    </div>
+
+    <!-- Playlist 1 -->
+    <div class="pl-slot" id="pl1-slot">
+      <div class="pl-header">
+        <span class="pl-title">PLAYLIST 1</span>
+        <span class="pl-badge notset" id="pl1-badge">NOT SET</span>
+        <span class="pl-status" id="pl1-status"></span>
+      </div>
+      <div class="batch-bar"><div class="batch-fill" id="pl1-bar" style="width:0%"></div></div>
+      <div class="pl-input-row">
+        <input id="pl1-url" type="text" placeholder="https://youtube.com/playlist?list=PL... (200+ songs supported)">
+        <button class="btn btn-green" onclick="setPl1()">SET PL1</button>
+      </div>
+    </div>
+
+    <!-- Playlist 2 -->
+    <div class="pl-slot" id="pl2-slot">
+      <div class="pl-header">
+        <span class="pl-title">PLAYLIST 2</span>
+        <span class="pl-badge notset" id="pl2-badge">NOT SET</span>
+        <span class="pl-status" id="pl2-status">Loops with PL1 after it's set</span>
+      </div>
+      <div class="pl-input-row">
+        <input id="pl2-url" type="text" placeholder="https://youtube.com/playlist?list=PL... (optional)">
+        <button class="btn btn-orange" onclick="setPl2()">SET PL2</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn btn-dim" onclick="toggleTrackList()">SHOW TRACKS</button>
+      <button class="btn btn-dim" onclick="skipTrack()">NEXT RANDOM ⏭</button>
+    </div>
+
+    <!-- Download log -->
+    <div style="margin-top:16px">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px">DOWNLOAD LOG</div>
+      <div class="console" id="dl-console">// Waiting...</div>
+    </div>
+
+    <!-- Track list -->
+    <div id="track-list-wrap" style="display:none">
+      <div class="track-list" id="track-list">
+        <div style="padding:20px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--muted)">No tracks loaded yet</div>
+      </div>
+    </div>
+
+    <!-- DANGER ZONE -->
+    <div class="danger-zone" style="margin-top:20px">
+      <div class="danger-title">⚠ DANGER ZONE</div>
+      <div class="danger-note">
+        LOAD &amp; START wipes all downloaded tracks and restarts from scratch.<br>
+        Use this only when starting the radio for the first time, or doing a full reset.<br>
+        The radio will go silent for ~60 seconds while first batch downloads.
+      </div>
+      <button class="btn btn-red" id="load-start-btn" onclick="loadAndStart()">WIPE &amp; LOAD &amp; START FRESH</button>
+    </div>
+  </div>
+
+  <!-- DJ -->
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--purple)"></div>DJ LIVE TAKEOVER</div>
+    <div class="section-note">
+      When a DJ connects, stream switches to live automatically.<br>
+      Works with: Mixxx, BUTT, VirtualDJ, Traktor, Serato
+    </div>
+    <div class="dj-status-row">
+      <div class="dj-status-dot" id="dj-dot"></div>
+      <div class="dj-status-text" id="dj-text">NO DJ CONNECTED</div>
+    </div>
+    <div class="dj-info-grid">
+      <div>
+        <div class="dj-field"><div class="dj-label">PROTOCOL</div><div class="dj-val" onclick="cp('Icecast 2')">Icecast 2<span class="copy-hint">click to copy</span></div></div>
+        <div class="dj-field"><div class="dj-label">PORT</div><div class="dj-val" onclick="cp('8001')">8001<span class="copy-hint">click to copy</span></div></div>
+        <div class="dj-field"><div class="dj-label">MOUNT</div><div class="dj-val" onclick="cp('/live')">/live<span class="copy-hint">click to copy</span></div></div>
+      </div>
+      <div>
+        <div class="dj-field"><div class="dj-label">USERNAME</div><div class="dj-val" onclick="cp('source')">source<span class="copy-hint">click to copy</span></div></div>
+        <div class="dj-field"><div class="dj-label">PASSWORD</div><div class="dj-val">set during setup<span class="copy-hint"></span></div></div>
+        <div class="dj-field"><div class="dj-label">FORMAT</div><div class="dj-val">MP3 128kbps Stereo<span class="copy-hint"></span></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var trackListOpen=false;
+
+setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString()},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString();
+
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2500)}
+function cp(v){navigator.clipboard.writeText(v).then(function(){showToast('Copied: '+v)}).catch(function(){showToast(v)})}
+
+function fetchStatus(){
+  fetch('/api/status').then(function(r){return r.json()}).then(function(d){
+    var b=d.batch_info||{};
+
+    document.getElementById('s-listeners').textContent=d.listeners!=null?d.listeners:'-';
+    document.getElementById('s-tracks').textContent=d.music_files!=null?d.music_files:'-';
+    document.getElementById('s-track').textContent=d.current_track||'-';
+
+    var played=b.played||0,bsize=b.batch_size||0;
+    document.getElementById('s-played').textContent=played+(bsize?'/'+bsize:'');
+    document.getElementById('s-batch-status').textContent=b.status_msg||'';
+
+    var ice=d.icecast==='online';
+    document.getElementById('s-icecast').textContent=ice?'ONLINE':'OFFLINE';
+    document.getElementById('s-icecast').className='stat-val '+(ice?'green':'red');
+    document.getElementById('s-icecast-pill').textContent=d.icecast?d.icecast.toUpperCase():'-';
+    document.getElementById('s-icecast-pill').className='pill '+(ice?'online':'offline');
+
+    var lq=d.liquidsoap==='online';
+    document.getElementById('s-lq').textContent=lq?'ONLINE':'OFFLINE';
+    document.getElementById('s-lq').className='stat-val '+(lq?'green':'red');
+
+    var mm={playing:'PLAYING',idle:'IDLE',dj:'DJ LIVE'};
+    document.getElementById('s-mode').textContent=mm[d.mode]||(d.mode?d.mode.toUpperCase():'-');
+    document.getElementById('s-mode').className='stat-val '+(d.mode==='dj'?'purple':d.mode==='playing'?'green':'muted');
+
+    var pct=bsize>0?Math.min(100,Math.round(played/bsize*100)):0;
+    document.getElementById('pl1-bar').style.width=pct+'%';
+
+    updateSlot(1,b.pl1_url,b.active_pl===1,b);
+    updateSlot(2,b.pl2_url,b.active_pl===2,b);
+
+    if(b.log&&b.log.length){
+      var cons=document.getElementById('dl-console');
+      cons.textContent=b.log.join('
+');
+      cons.scrollTop=cons.scrollHeight;
+    }
+
+    var live=d.is_live;
+    document.getElementById('dj-dot').className='dj-status-dot'+(live?' live':'');
+    document.getElementById('dj-text').textContent=live?'DJ LIVE - Stream active':'NO DJ CONNECTED - Playlist mode';
+    document.getElementById('dj-text').className='dj-status-text'+(live?' live':'');
+
+    if(b.pl1_url&&!document.getElementById('pl1-url').value)document.getElementById('pl1-url').value=b.pl1_url;
+    if(b.pl2_url&&!document.getElementById('pl2-url').value)document.getElementById('pl2-url').value=b.pl2_url;
+  }).catch(function(){});
+}
+
+function updateSlot(num,url,isActive,b){
+  var slot=document.getElementById('pl'+num+'-slot');
+  var badge=document.getElementById('pl'+num+'-badge');
+  var status=document.getElementById('pl'+num+'-status');
+  if(!url){
+    slot.className='pl-slot';
+    badge.className='pl-badge notset';badge.textContent='NOT SET';
+    status.textContent='';return;
+  }
+  if(isActive){
+    var resetPending=b.reset_pending&&b.active_pl===num;
+    if(resetPending){
+      slot.className='pl-slot active-reset';
+      badge.className='pl-badge active-reset';badge.textContent='ACTIVE → RESET ON NEXT BATCH';
+    } else if(b.downloading){
+      slot.className='pl-slot active';
+      badge.className='pl-badge loading';badge.textContent='PRE-LOADING NEXT';
+    } else {
+      slot.className='pl-slot active';
+      badge.className='pl-badge active';badge.textContent='ACTIVE';
+    }
+    status.textContent='Batch '+b.active_batch+' | '+b.status_msg;
+  } else {
+    slot.className='pl-slot queued';
+    badge.className='pl-badge queued';badge.textContent='QUEUED';
+    status.textContent='Plays after PL'+num===2?'1':'2'+' finishes';
+  }
+}
+
+setInterval(fetchStatus,4000);fetchStatus();
+
+function setPl1(){
+  var url=document.getElementById('pl1-url').value.trim();
+  if(!url){showToast('Paste a Playlist 1 URL first');return}
+  fetch('/api/playlist1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})})
+    .then(function(r){return r.json()}).then(function(d){
+      if(d.reset_pending)showToast('PL1 updated — resets to song 1 on next batch');
+      else showToast('PL1 URL saved');
+    }).catch(function(){showToast('Error')});
+}
+
+function setPl2(){
+  var url=document.getElementById('pl2-url').value.trim();
+  if(!url){showToast('Paste a Playlist 2 URL first');return}
+  fetch('/api/playlist2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})})
+    .then(function(r){return r.json()}).then(function(){showToast('PL2 URL saved')})
+    .catch(function(){showToast('Error')});
+}
+
+function loadAndStart(){
+  var url=document.getElementById('pl1-url').value.trim();
+  var url2=document.getElementById('pl2-url').value.trim();
+  if(!url){showToast('Paste a Playlist 1 URL first');return}
+  if(!confirm('This will WIPE all downloaded tracks and restart from scratch. Radio will be silent for ~60 seconds. Are you sure?'))return;
+  var btn=document.getElementById('load-start-btn');
+  btn.disabled=true;btn.textContent='STARTING...';
+  fetch('/api/playlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,url2:url2})})
+    .then(function(r){return r.json()}).then(function(){
+      showToast('Wiping and restarting...');
+      btn.disabled=false;btn.textContent='WIPE & LOAD & START FRESH';
+    }).catch(function(){showToast('Error');btn.disabled=false;btn.textContent='WIPE & LOAD & START FRESH'});
+}
+
+function skipTrack(){
+  fetch('/api/skip',{method:'POST'}).then(function(){showToast('Next random track');setTimeout(fetchStatus,1000)});
+}
+
+function toggleTrackList(){
+  trackListOpen=!trackListOpen;
+  document.getElementById('track-list-wrap').style.display=trackListOpen?'block':'none';
+  if(trackListOpen)loadTrackList();
+}
+
+function loadTrackList(){
+  fetch('/api/music').then(function(r){return r.json()}).then(function(d){
+    var list=document.getElementById('track-list');
+    if(!d.files||!d.files.length){
+      list.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--muted)">No tracks loaded yet</div>';
+      return;
+    }
+    list.innerHTML='';
+    for(var i=0;i<d.files.length;i++){
+      (function(idx,track){
+        var item=document.createElement('div');item.className='track-item';
+        var num=document.createElement('span');num.className='track-num';num.textContent=(idx+1);
+        var name=document.createElement('span');name.className='track-name';name.textContent=track.display;
+        var batchEl=document.createElement('span');batchEl.className='track-batch';
+        var m=track.file.match(/^(P\d+B\d+)/);
+        batchEl.textContent=m?m[1]:'';
+        item.appendChild(num);item.appendChild(name);item.appendChild(batchEl);
+        list.appendChild(item);
+      })(i,d.files[i]);
+    }
+  });
+}
+</script>
+</body>
+</html>
