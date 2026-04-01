@@ -237,7 +237,8 @@ function fetchStatus(){
 
     if(b.log&&b.log.length){
       var cons=document.getElementById('dl-console');
-      cons.textContent=b.log.join('\n');
+      cons.textContent=b.log.join('
+');
       cons.scrollTop=cons.scrollHeight;
     }
 
