@@ -249,7 +249,6 @@ class BatchManager:
 
             # ── Detect switch to next batch ────────────────────────────────────
             if self.next_prefix and filename.startswith(self.next_prefix):
-                # Wipe any remaining files from the old batch
                 if self.cleanup_prefix:
                     self._delete_prefix(self.cleanup_prefix)
                     self.cleanup_prefix = ""
@@ -262,6 +261,8 @@ class BatchManager:
                 return
 
             # ── Count remaining songs — deleted ones can never replay ──────────
+            if not self.current_prefix:
+                return
             remaining = len(list(Path(MUSIC_DIR).glob(f"{self.current_prefix}*.mp3")))
             played    = BATCH_SIZE - remaining
 
