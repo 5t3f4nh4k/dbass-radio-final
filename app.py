@@ -8,12 +8,13 @@ CORS(app, origins=["*"])
 
 MUSIC_DIR       = "/var/lib/dbass/music"
 CONFIG_FILE     = "/etc/dbass/config.json"
+COOKIES_FILE    = "/etc/dbass/youtube-cookies.txt"
 LQ_HOST         = "127.0.0.1"
 LQ_PORT         = 1234
 ICE_ADMIN_USER  = os.environ.get("ICE_ADMIN_USER", "admin")
 ICE_ADMIN_PASS  = os.environ.get("ICE_ADMIN_PASS", "changeme")
 BATCH_SIZE      = 30
-PRE_DOWNLOAD_AT = 20  # download next batch when this many songs have been deleted
+PRE_DOWNLOAD_AT = 20  # trigger next batch download after this many songs played
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -67,19 +68,25 @@ def sanitize_name(name):
 def make_prefix(pl_num, batch_num):
     return f"P{pl_num}B{batch_num:02d}"
 
+def count_prefix(prefix):
+    """Count mp3 files for a given prefix in music dir."""
+    return len(list(Path(MUSIC_DIR).glob(f"{prefix}*.mp3")))
+
 # ── BATCH MANAGER ─────────────────────────────────────────────────────────────
 
 class BatchManager:
 
     def __init__(self):
-        self.lock             = threading.Lock()
+        self.lock                = threading.Lock()
         self._load_state()
-        self.next_downloading = False
-        self.next_ready       = False
-        self.last_on_air      = ""
-        self.status_msg       = "Ready"
-        self.download_log     = []
-        self.reset_pending    = False
+        self.next_downloading    = False
+        self.next_ready          = False
+        self.current_downloading = False
+        self.last_on_air         = ""
+        self.played_set          = set()   # tracks filenames played this batch
+        self.status_msg          = "Ready"
+        self.download_log        = []
+        self.reset_pending       = False
         threading.Thread(target=self._loop, daemon=True).start()
 
     # ── State persistence ──────────────────────────────────────────────────────
@@ -122,10 +129,8 @@ class BatchManager:
 
     def _download_batch(self, url, prefix, start_idx):
         end_idx = start_idx + BATCH_SIZE - 1
-        out_tpl = (
-            f"{MUSIC_DIR}/{prefix}_"
-            "%(autonumber)04d - %(title)s.%(ext)s"
-        )
+        out_tpl = f"{MUSIC_DIR}/{prefix}_%(autonumber)04d - %(title)s.%(ext)s"
+
         cmd = [
             "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "128K",
             "-o", out_tpl,
@@ -133,8 +138,10 @@ class BatchManager:
             "--no-warnings", "--newline",
             "--no-overwrites",
             "--autonumber-start", str(start_idx),
-            url
         ]
+        if os.path.exists(COOKIES_FILE):
+            cmd += ["--cookies", COOKIES_FILE]
+        cmd.append(url)
 
         def log(line):
             self.download_log.append(line)
@@ -160,7 +167,7 @@ class BatchManager:
                 try: f.unlink()
                 except: pass
 
-        # Sanitize filenames — skip if destination already exists
+        # Sanitize filenames
         for f in list(Path(MUSIC_DIR).iterdir()):
             if not f.name.startswith(prefix) or f.suffix != '.mp3':
                 continue
@@ -189,7 +196,7 @@ class BatchManager:
                 if tmp.exists():
                     tmp.unlink()
 
-        count = len(list(Path(MUSIC_DIR).glob(f"{prefix}*.mp3")))
+        count = count_prefix(prefix)
         log(f"[batch] {prefix} ready — {count} tracks")
         return count
 
@@ -201,7 +208,7 @@ class BatchManager:
             except: pass
 
     def _delete_file(self, filename):
-        """Delete a single finished track from disk."""
+        """Delete a finished track from disk."""
         if not filename:
             return
         f = Path(MUSIC_DIR) / filename
@@ -210,6 +217,70 @@ class BatchManager:
                 f.unlink()
         except:
             pass
+
+    # ── Pre-download trigger ───────────────────────────────────────────────────
+
+    def _maybe_trigger_predownload(self):
+        """
+        Check if we should start downloading the next batch.
+        Called every tick regardless of whether a new song was detected.
+        Uses played_set count so it works even when Liquidsoap goes quiet.
+        """
+        if self.next_downloading or self.next_ready or self.current_downloading:
+            return
+        if not self.current_prefix:
+            return
+
+        played = max(len(self.played_set), BATCH_SIZE - count_prefix(self.current_prefix))
+        if played < PRE_DOWNLOAD_AT:
+            return
+
+        # Trigger next batch download
+        if self.reset_pending:
+            next_start  = 1
+            next_batch  = 1
+            next_pl_num = self.active_pl
+            next_url    = self.pl1_url if self.active_pl == 1 else self.pl2_url
+            self.reset_pending = False
+        else:
+            next_start  = self.batch_start + BATCH_SIZE
+            next_batch  = self.active_batch + 1
+            next_pl_num = self.active_pl
+            next_url    = self.pl1_url if self.active_pl == 1 else self.pl2_url
+
+        next_pfx = make_prefix(next_pl_num, next_batch)
+        self.next_prefix      = next_pfx
+        self.cleanup_prefix   = self.current_prefix
+        self.next_downloading = True
+        self.status_msg       = f"Pre-downloading batch {next_batch}..."
+        self._save_state()
+
+        _next_pl    = next_pl_num
+        _next_batch = next_batch
+        _next_start = next_start
+        _next_url   = next_url
+        _next_pfx   = next_pfx
+
+        def do_download():
+            count = self._download_batch(_next_url, _next_pfx, _next_start)
+            with self.lock:
+                if count == 0:
+                    self.next_prefix      = ""
+                    self.cleanup_prefix   = ""
+                    self.next_ready       = False
+                    self.next_downloading = False
+                    self.status_msg       = "Batch download failed — will retry"
+                    self._save_state()
+                    return
+                self.active_pl        = _next_pl
+                self.active_batch     = _next_batch
+                self.batch_start      = _next_start
+                self.next_ready       = True
+                self.next_downloading = False
+                self.status_msg       = f"Batch {_next_batch} preloaded"
+                lq_cmd("music.reload")
+                self._save_state()
+        threading.Thread(target=do_download, daemon=True).start()
 
     # ── Main loop ──────────────────────────────────────────────────────────────
 
@@ -226,8 +297,25 @@ class BatchManager:
             if not self.current_prefix:
                 return
 
+            # Block tick while first batch is downloading
+            if self.current_downloading:
+                self.status_msg = f"Downloading batch {self.active_batch}..."
+                return
+
+            # ── Always check if pre-download should be triggered ───────────────
+            # This runs every tick regardless of song changes
+            self._maybe_trigger_predownload()
+
+            # ── Detect what's currently playing ───────────────────────────────
             on_air = lq_cmd("request.on_air").strip()
             if not on_air or not on_air.isdigit():
+                # Liquidsoap not playing — update status but don't return early
+                remaining = count_prefix(self.current_prefix)
+                played    = len(self.played_set)
+                self.status_msg = (
+                    f"PL{self.active_pl} Batch {self.active_batch} — "
+                    f"{played}/{BATCH_SIZE} played, {remaining} remaining"
+                )
                 return
 
             meta = lq_cmd(f"request.metadata {on_air}")
@@ -238,20 +326,31 @@ class BatchManager:
                     filename = Path(raw).name
                     break
 
+            # Update status with current counts
+            remaining = count_prefix(self.current_prefix)
+            played    = len(self.played_set)
+            self.status_msg = (
+                f"PL{self.active_pl} Batch {self.active_batch} — "
+                f"{played}/{BATCH_SIZE} played, {remaining} remaining"
+            )
+
             if not filename or filename == self.last_on_air:
                 return
 
-            # ── New song started — delete the one that just finished ───────────
+            # ── New song detected ──────────────────────────────────────────────
+
+            # Delete the song that just finished
             if self.last_on_air:
                 self._delete_file(self.last_on_air)
 
             self.last_on_air = filename
 
-            # ── Detect switch to next batch ────────────────────────────────────
+            # Detect switch to next batch
             if self.next_prefix and filename.startswith(self.next_prefix):
                 if self.cleanup_prefix:
                     self._delete_prefix(self.cleanup_prefix)
                     self.cleanup_prefix = ""
+                self.played_set       = set()
                 self.next_ready       = False
                 self.next_downloading = False
                 self.current_prefix   = self.next_prefix
@@ -260,78 +359,9 @@ class BatchManager:
                 self.status_msg = f"PL{self.active_pl} Batch {self.active_batch} playing"
                 return
 
-            # ── Count remaining songs — deleted ones can never replay ──────────
-            if not self.current_prefix:
-                return
-            remaining = len(list(Path(MUSIC_DIR).glob(f"{self.current_prefix}*.mp3")))
-            played    = BATCH_SIZE - remaining
-
-            self.status_msg = (
-                f"PL{self.active_pl} Batch {self.active_batch} — "
-                f"{played}/{BATCH_SIZE} played, {remaining} remaining"
-            )
-
-            # ── Trigger pre-download when PRE_DOWNLOAD_AT songs deleted ────────
-            if played >= PRE_DOWNLOAD_AT and not self.next_downloading and not self.next_ready:
-                if self.reset_pending:
-                    next_start  = 1
-                    next_batch  = 1
-                    next_pl_num = self.active_pl
-                    next_url    = self.pl1_url if self.active_pl == 1 else self.pl2_url
-                    self.reset_pending = False
-                else:
-                    next_start  = self.batch_start + BATCH_SIZE
-                    next_batch  = self.active_batch + 1
-                    next_pl_num = self.active_pl
-                    next_url    = self.pl1_url if self.active_pl == 1 else self.pl2_url
-
-                next_pfx = make_prefix(next_pl_num, next_batch)
-                self.next_prefix      = next_pfx
-                self.cleanup_prefix   = self.current_prefix
-                self.next_downloading = True
-                self.status_msg       = f"Pre-downloading batch {next_batch}..."
-                self._save_state()
-
-                _next_pl    = next_pl_num
-                _next_batch = next_batch
-                _next_start = next_start
-                _next_url   = next_url
-                _next_pfx   = next_pfx
-
-                def do_download():
-                    count = self._download_batch(_next_url, _next_pfx, _next_start)
-                    with self.lock:
-                        if count == 0:
-                            other_pl  = 2 if _next_pl == 1 else 1
-                            other_url = self.pl2_url if other_pl == 2 else self.pl1_url
-                            if not other_url:
-                                other_pl    = _next_pl
-                                other_url   = self.pl1_url
-                                other_batch = 1
-                                other_start = 1
-                            else:
-                                other_batch = 1
-                                other_start = 1
-
-                            new_pfx = make_prefix(other_pl, other_batch)
-                            self.next_prefix  = new_pfx
-                            self.active_pl    = other_pl
-                            self.active_batch = other_batch
-                            self.batch_start  = other_start
-                            count2 = self._download_batch(other_url, new_pfx, other_start)
-                            self.next_ready = count2 > 0
-                        else:
-                            self.active_pl    = _next_pl
-                            self.active_batch = _next_batch
-                            self.batch_start  = _next_start
-                            self.next_ready   = True
-
-                        self.next_downloading = False
-                        self.status_msg = f"Batch {self.active_batch} preloaded"
-                        lq_cmd("music.reload")
-                        self._save_state()
-
-                threading.Thread(target=do_download, daemon=True).start()
+            # Track this song as played in current batch
+            if filename.startswith(self.current_prefix):
+                self.played_set.add(filename)
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
@@ -340,26 +370,29 @@ class BatchManager:
             for f in list(Path(MUSIC_DIR).iterdir()):
                 try: f.unlink()
                 except: pass
-            self.pl1_url          = pl1_url
-            self.pl2_url          = pl2_url
-            self.active_pl        = 1
-            self.active_batch     = 1
-            self.batch_start      = 1
-            self.current_prefix   = make_prefix(1, 1)
-            self.next_prefix      = ""
-            self.cleanup_prefix   = ""
-            self.next_ready       = False
-            self.next_downloading = False
-            self.reset_pending    = False
-            self.last_on_air      = ""
-            self.status_msg       = "Downloading first batch..."
-            self.download_log     = []
+            self.pl1_url             = pl1_url
+            self.pl2_url             = pl2_url
+            self.active_pl           = 1
+            self.active_batch        = 1
+            self.batch_start         = 1
+            self.current_prefix      = make_prefix(1, 1)
+            self.next_prefix         = ""
+            self.cleanup_prefix      = ""
+            self.next_ready          = False
+            self.next_downloading    = False
+            self.current_downloading = True
+            self.reset_pending       = False
+            self.last_on_air         = ""
+            self.played_set          = set()
+            self.status_msg          = "Downloading first batch..."
+            self.download_log        = []
             self._save_state()
 
         def do_first():
             pfx   = make_prefix(1, 1)
             count = self._download_batch(pl1_url, pfx, 1)
             with self.lock:
+                self.current_downloading = False
                 self.status_msg = f"Batch 1 ready — {count} tracks"
             lq_cmd("music.reload")
 
@@ -383,7 +416,7 @@ class BatchManager:
 
     def get_info(self):
         with self.lock:
-            remaining = len(list(Path(MUSIC_DIR).glob(f"{self.current_prefix}*.mp3"))) if self.current_prefix else 0
+            remaining = count_prefix(self.current_prefix) if self.current_prefix else 0
             return {
                 "pl1_url":        self.pl1_url,
                 "pl2_url":        self.pl2_url,
@@ -392,7 +425,7 @@ class BatchManager:
                 "batch_start":    self.batch_start,
                 "current_prefix": self.current_prefix,
                 "next_prefix":    self.next_prefix,
-                "played":         max(0, BATCH_SIZE - remaining),
+                "played":         len(self.played_set),
                 "batch_size":     BATCH_SIZE,
                 "remaining":      remaining,
                 "downloading":    self.next_downloading,
