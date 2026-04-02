@@ -106,6 +106,9 @@ class BatchManager:
         self.next_prefix    = s.get("next_prefix", "")
         self.cleanup_prefix = s.get("cleanup_prefix", "")
         self.reset_pending  = s.get("reset_pending", False)
+        # Always reset download state on startup — forces re-check
+        self.next_ready       = False
+        self.next_downloading = False
 
     def _save_state(self):
         try:
@@ -121,6 +124,8 @@ class BatchManager:
                     "next_prefix":    self.next_prefix,
                     "cleanup_prefix": self.cleanup_prefix,
                     "reset_pending":  self.reset_pending,
+                    "next_ready":     self.next_ready,
+                    "next_downloading": self.next_downloading,
                 }, f, indent=2)
         except:
             pass
