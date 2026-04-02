@@ -280,6 +280,7 @@ class BatchManager:
                 self.active_pl        = _next_pl
                 self.active_batch     = _next_batch
                 self.batch_start      = _next_start
+                self.next_prefix      = _next_pfx
                 self.next_ready       = True
                 self.next_downloading = False
                 self.status_msg       = f"Batch {_next_batch} preloaded"
