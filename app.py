@@ -267,14 +267,32 @@ class BatchManager:
         _next_pfx   = next_pfx
 
         def do_download():
-            count = self._download_batch(_next_url, _next_pfx, _next_start)
+            try:
+                count = self._download_batch(_next_url, _next_pfx, _next_start)
+            except Exception as e:
+                with self.lock:
+                    self.next_downloading = False
+                    self.next_prefix = ""
+                    self.status_msg = f"Download error: {e}"
+                    self._save_state()
+                return
             with self.lock:
                 if count == 0:
-                    self.next_prefix      = ""
-                    self.cleanup_prefix   = ""
-                    self.next_ready       = False
+                    # Past end of playlist — switch to other playlist or loop
+                    other_pl  = 2 if _next_pl == 1 else 1
+                    other_url = self.pl2_url if other_pl == 2 else self.pl1_url
+                    if not other_url:
+                        other_pl  = _next_pl
+                        other_url = _next_url
+                    new_pfx = make_prefix(other_pl, 1)
+                    count2  = self._download_batch(other_url, new_pfx, 1)
+                    self.active_pl        = other_pl
+                    self.active_batch     = 1
+                    self.batch_start      = 1
+                    self.next_prefix      = new_pfx
+                    self.next_ready       = count2 > 0
                     self.next_downloading = False
-                    self.status_msg       = "Batch download failed — will retry"
+                    self.status_msg       = f"Switched to PL{other_pl}"
                     self._save_state()
                     return
                 self.active_pl        = _next_pl
