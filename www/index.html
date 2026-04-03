@@ -15,8 +15,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--green),var(--orange))}
 .logo{font-family:var(--font-h);font-size:52px;letter-spacing:6px;color:var(--green);line-height:1;text-shadow:0 0 30px rgba(0,255,65,.4);animation:glitch 5s infinite}
 .logo span{color:var(--orange)}
-.logo-sub{font-family:var(--font-mono);font-size:11px;letter-spacing:5px;color:#e8e8e8;text-shadow:0 0 8px rgba(255,255,255,0.9);margin-top:4px;margin-bottom:28px;animation:neon-broken 9s infinite}
-@keyframes neon-broken{0%{opacity:0}4%{opacity:1}6%{opacity:.1}8%{opacity:1}10%{opacity:.05}12%{opacity:1}14%{opacity:.8}16%{opacity:1}17%{opacity:0}22%{opacity:0}23%{opacity:1}25%{opacity:.1}27%{opacity:1}29%{opacity:0}55%{opacity:0}56%{opacity:.9}57%{opacity:0}58%{opacity:1}60%{opacity:.05}61%{opacity:1}63%{opacity:0}90%{opacity:0}91%{opacity:1}93%{opacity:.2}95%{opacity:1}97%{opacity:0}100%{opacity:0}}@keyframes glitch{0%,95%,100%{text-shadow:0 0 30px rgba(0,255,65,.4)}96%{text-shadow:3sx 0 20px rgba(0,255,65,.4),-3px 0 8px rgba(255,69,0,.5);transform:translateX(1px)}97%{text-shadow:-3px 0 20px rgba(0,255,65,.4);transform:translateX(-1px)}98%{transform:none}}
+.logo-sub{font-family:var(--font-mono);font-size:11px;letter-spacing:5px;color:#555;text-shadow:none;margin-top:4px;margin-bottom:28px;animation:neon-broken 9s infinite}
+@keyframes neon-broken{0%{color:#555;text-shadow:none}4%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}6%{color:#111;text-shadow:none}8%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}10%{color:#555;text-shadow:none}12%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}14%{color:#ddd;text-shadow:0 0 6px rgba(255,255,255,0.5)}16%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}17%{color:#555;text-shadow:none}55%{color:#555;text-shadow:none}56%{color:#eee;text-shadow:0 0 8px rgba(255,255,255,0.7)}57%{color:#555;text-shadow:none}58%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}60%{color:#555;text-shadow:none}61%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}63%{color:#555;text-shadow:none}90%{color:#555;text-shadow:none}91%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}93%{color:#555;text-shadow:none}95%{color:#fff;text-shadow:0 0 8px rgba(255,255,255,0.9),0 0 20px rgba(255,255,255,0.6)}97%{color:#555;text-shadow:none}100%{color:#555;text-shadow:none}}@keyframes glitch{0%,95%,100%{text-shadow:0 0 30px rgba(0,255,65,.4)}96%{text-shadow:3sx 0 20px rgba(0,255,65,.4),-3px 0 8px rgba(255,69,0,.5);transform:translateX(1px)}97%{text-shadow:-3px 0 20px rgba(0,255,65,.4);transform:translateX(-1px)}98%{transform:none}}
 .status-row{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--dim)}
 .on-air{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--orange)}
 .on-air.offline{color:var(--muted)}
@@ -71,7 +71,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <div class="ic g">MP3 · 128kbps</div>
     <div class="ic">STEREO · 44.1kHz</div>
     <div class="ic o" id="mc">—</div>
-    <div class="ic" style="margin-left:auto;border-color:transparent;font-size:8px;color:var(--muted)">DRUJBA BASS RADIO</div>
+    <div class="ic" style="margin-left:auto;border-color:transparent;font-size:8px;color:var(--muted)">Made with <span style="color:var(--green);text-shadow:0 0 8px rgba(0,255,65,.8)">ONE LOVE</span></div>
   </div>
 </div>
 <audio id="ra" preload="none" crossorigin="anonymous"></audio>
@@ -127,7 +127,7 @@ function _fs(){
     document.getElementById('lc').textContent=d.listeners||'—';
     var t=(d.current_track||'—').replace(/^[A-Z0-9]*_\d+ - /, '')
     document.getElementById('npt').textContent=t;
-    document.getElementById('npa').textContent=d.is_live?'🎛 DJ LIVE':'D-BASS RADIO';
+    document.getElementById('npa').textContent=d.is_live?'🎛 DJ LIVE':'';
     document.getElementById('mc').textContent=d.mode?d.mode.toUpperCase():'—';
     if(d.icecast==='online'){document.getElementById('pb').classList.remove('loading');if(!_pl)document.getElementById('pb').textContent='▶'}
   }).catch(function(){})
