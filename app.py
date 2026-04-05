@@ -68,6 +68,12 @@ def sanitize_name(name):
 def make_prefix(pl_num, batch_num):
     return f"P{pl_num}B{batch_num:02d}"
 
+def normalize_url(url):
+    import re
+    if re.match(r"https?://soundcloud\.com/[^/]+/?(?:\?.*)?$", url):
+        return url.split("?")[0].rstrip("/") + "/tracks"
+    return url
+
 def count_prefix(prefix):
     """Count mp3 files for a given prefix in music dir."""
     return len(list(Path(MUSIC_DIR).glob(f"{prefix}*.mp3")))
@@ -137,11 +143,12 @@ class BatchManager:
         out_tpl = f"{MUSIC_DIR}/{prefix}_%(autonumber)04d - %(title)s.%(ext)s"
 
         cmd = [
-            "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "128K",
+            "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "128K", "--recode-video", "mp3",
             "-o", out_tpl,
             "--playlist-items", f"{start_idx}-{end_idx}",
             "--no-warnings", "--newline",
             "--no-overwrites",
+            "--extractor-args", "youtubetab:skip=authcheck",
             "--autonumber-start", str(start_idx),
         ]
         if os.path.exists(COOKIES_FILE):
@@ -263,7 +270,7 @@ class BatchManager:
         _next_pl    = next_pl_num
         _next_batch = next_batch
         _next_start = next_start
-        _next_url   = next_url
+        _next_url   = normalize_url(next_url)
         _next_pfx   = next_pfx
 
         def do_download():
@@ -414,7 +421,7 @@ class BatchManager:
 
         def do_first():
             pfx   = make_prefix(1, 1)
-            count = self._download_batch(pl1_url, pfx, 1)
+            count = self._download_batch(normalize_url(pl1_url), pfx, 1)
             with self.lock:
                 self.current_downloading = False
                 self.status_msg = f"Batch 1 ready — {count} tracks"
